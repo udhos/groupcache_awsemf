@@ -59,6 +59,7 @@ type Exporter struct {
 	hostname      string
 	metricContext *emf.Metric
 	cwlogClient   *cwlog.Log
+	previousStats map[string]groupcache_exporter.Stats
 }
 
 // New creates an exporter.
@@ -98,6 +99,7 @@ func New(options Options) (*Exporter, error) {
 		done:          make(chan struct{}),
 		hostname:      hostname,
 		metricContext: emf.New(emf.Options{}),
+		previousStats: map[string]groupcache_exporter.Stats{},
 	}
 
 	if options.AwsConfig != nil {
@@ -162,6 +164,9 @@ func (e *Exporter) exportGroup(g groupcache_exporter.GroupStatistics) {
 		dimensions[e.options.HostnameTagKey] = e.hostname
 	}
 
+	previousStats := e.previousStats[groupName]
+	previousGroup := previousStats.Group
+
 	stats := g.Collect() // grab current metrics
 
 	if e.options.Debug {
@@ -187,23 +192,30 @@ func (e *Exporter) exportGroup(g groupcache_exporter.GroupStatistics) {
 
 	group := stats.Group
 
-	e.metricContext.Record(namespace, metricGets, dimensions, int(group.CounterGets))
-	e.metricContext.Record(namespace, metricHits, dimensions, int(group.CounterHits))
-	e.metricContext.Record(namespace, metricGetFromPeersLatencyLower, dimensions, int(group.GaugeGetFromPeersLatencyLower))
-	e.metricContext.Record(namespace, metricPeerLoads, dimensions, int(group.CounterPeerLoads))
-	e.metricContext.Record(namespace, metricPeerErrors, dimensions, int(group.CounterPeerErrors))
-	e.metricContext.Record(namespace, metricLoads, dimensions, int(group.CounterLoads))
-	e.metricContext.Record(namespace, metricLoadsDeduped, dimensions, int(group.CounterLoadsDeduped))
-	e.metricContext.Record(namespace, metricLocalLoads, dimensions, int(group.CounterLocalLoads))
-	e.metricContext.Record(namespace, metricLocalLoadsErrs, dimensions, int(group.CounterLocalLoadsErrs))
-	e.metricContext.Record(namespace, metricServerRequests, dimensions, int(group.CounterServerRequests))
-	e.metricContext.Record(namespace, metricCrosstalkRefusals, dimensions, int(group.CounterCrosstalkRefusals))
+	//
+	// cloudwatch metrics are deltas
+	//
+	delta := groupcache_exporter.GetCacheDelta(previousGroup, group)
 
-	e.exportGroupType(stats.Main, namespace, dimensions, "main")
-	e.exportGroupType(stats.Hot, namespace, dimensions, "hot")
+	e.metricContext.Record(namespace, metricGets, dimensions, int(delta.Gets))
+	e.metricContext.Record(namespace, metricHits, dimensions, int(delta.Hits))
+	e.metricContext.Record(namespace, metricGetFromPeersLatencyLower, dimensions, int(group.GaugeGetFromPeersLatencyLower))
+	e.metricContext.Record(namespace, metricPeerLoads, dimensions, int(delta.PeerLoads))
+	e.metricContext.Record(namespace, metricPeerErrors, dimensions, int(delta.PeerErrors))
+	e.metricContext.Record(namespace, metricLoads, dimensions, int(delta.Loads))
+	e.metricContext.Record(namespace, metricLoadsDeduped, dimensions, int(delta.LoadsDeduped))
+	e.metricContext.Record(namespace, metricLocalLoads, dimensions, int(delta.LocalLoads))
+	e.metricContext.Record(namespace, metricLocalLoadsErrs, dimensions, int(delta.LocalLoadsErrs))
+	e.metricContext.Record(namespace, metricServerRequests, dimensions, int(delta.ServerRequests))
+	e.metricContext.Record(namespace, metricCrosstalkRefusals, dimensions, int(delta.CrosstalkRefusals))
+
+	e.exportGroupType(previousStats.Main, stats.Main, namespace, dimensions, "main")
+	e.exportGroupType(previousStats.Hot, stats.Hot, namespace, dimensions, "hot")
+
+	e.previousStats[groupName] = stats // save for next collection
 }
 
-func (e *Exporter) exportGroupType(stats groupcache_exporter.CacheTypeStats,
+func (e *Exporter) exportGroupType(prev, curr groupcache_exporter.CacheTypeStats,
 	namespace string,
 	dimensions map[string]string,
 	cacheType string) {
@@ -217,10 +229,15 @@ func (e *Exporter) exportGroupType(stats groupcache_exporter.CacheTypeStats,
 	metricCacheEvictions := emf.MetricDefinition{Name: "cache_evictions"}
 	metricCacheEvictionsNonExpired := emf.MetricDefinition{Name: "cache_evictions_nonexpired"}
 
-	e.metricContext.Record(namespace, metricCacheItems, dimensions, int(stats.GaugeCacheItems))
-	e.metricContext.Record(namespace, metricCacheBytes, dimensions, int(stats.GaugeCacheBytes))
-	e.metricContext.Record(namespace, metricCacheGets, dimensions, int(stats.CounterCacheGets))
-	e.metricContext.Record(namespace, metricCacheHits, dimensions, int(stats.CounterCacheHits))
-	e.metricContext.Record(namespace, metricCacheEvictions, dimensions, int(stats.CounterCacheEvictions))
-	e.metricContext.Record(namespace, metricCacheEvictionsNonExpired, dimensions, int(stats.CounterCacheEvictionsNonExpired))
+	//
+	// cloudwatch metrics are deltas
+	//
+	delta := groupcache_exporter.GetCacheTypeDelta(prev, curr)
+
+	e.metricContext.Record(namespace, metricCacheItems, dimensions, int(curr.GaugeCacheItems))
+	e.metricContext.Record(namespace, metricCacheBytes, dimensions, int(curr.GaugeCacheBytes))
+	e.metricContext.Record(namespace, metricCacheGets, dimensions, int(delta.Gets))
+	e.metricContext.Record(namespace, metricCacheHits, dimensions, int(delta.Hits))
+	e.metricContext.Record(namespace, metricCacheEvictions, dimensions, int(delta.Evictions))
+	e.metricContext.Record(namespace, metricCacheEvictionsNonExpired, dimensions, int(delta.EvictionsNonExpired))
 }
