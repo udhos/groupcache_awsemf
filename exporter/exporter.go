@@ -14,6 +14,27 @@ import (
 	"github.com/udhos/groupcache_exporter"
 )
 
+var (
+	metricGets                     = emf.MetricDefinition{Name: "gets", Unit: "Count"}
+	metricHits                     = emf.MetricDefinition{Name: "hits", Unit: "Count"}
+	metricGetFromPeersLatencyLower = emf.MetricDefinition{Name: "get_from_peers_latency_slowest_milliseconds", Unit: "Milliseconds"}
+	metricPeerLoads                = emf.MetricDefinition{Name: "peer_loads", Unit: "Count"}
+	metricPeerErrors               = emf.MetricDefinition{Name: "peer_errors", Unit: "Count"}
+	metricLoads                    = emf.MetricDefinition{Name: "loads", Unit: "Count"}
+	metricLoadsDeduped             = emf.MetricDefinition{Name: "loads_deduped", Unit: "Count"}
+	metricLocalLoads               = emf.MetricDefinition{Name: "local_load", Unit: "Count"}
+	metricLocalLoadsErrs           = emf.MetricDefinition{Name: "local_load_errs", Unit: "Count"}
+	metricServerRequests           = emf.MetricDefinition{Name: "server_requests", Unit: "Count"}
+	metricCrosstalkRefusals        = emf.MetricDefinition{Name: "crosstalk_refusals", Unit: "Count"}
+
+	metricCacheItems               = emf.MetricDefinition{Name: "cache_items", Unit: "Count"}
+	metricCacheBytes               = emf.MetricDefinition{Name: "cache_bytes", Unit: "Bytes"}
+	metricCacheGets                = emf.MetricDefinition{Name: "cache_gets", Unit: "Count"}
+	metricCacheHits                = emf.MetricDefinition{Name: "cache_hits", Unit: "Count"}
+	metricCacheEvictions           = emf.MetricDefinition{Name: "cache_evictions", Unit: "Count"}
+	metricCacheEvictionsNonExpired = emf.MetricDefinition{Name: "cache_evictions_nonexpired", Unit: "Count"}
+)
+
 // Options define exporter options.
 type Options struct {
 	// Application is required application name.
@@ -176,18 +197,6 @@ func (e *Exporter) exportGroup(g groupcache_exporter.GroupStatistics) {
 		)
 	}
 
-	metricGets := emf.MetricDefinition{Name: "gets"}
-	metricHits := emf.MetricDefinition{Name: "hits"}
-	metricGetFromPeersLatencyLower := emf.MetricDefinition{Name: "get_from_peers_latency_slowest_milliseconds"}
-	metricPeerLoads := emf.MetricDefinition{Name: "peer_loads"}
-	metricPeerErrors := emf.MetricDefinition{Name: "peer_errors"}
-	metricLoads := emf.MetricDefinition{Name: "loads"}
-	metricLoadsDeduped := emf.MetricDefinition{Name: "loads_deduped"}
-	metricLocalLoads := emf.MetricDefinition{Name: "local_load"}
-	metricLocalLoadsErrs := emf.MetricDefinition{Name: "local_load_errs"}
-	metricServerRequests := emf.MetricDefinition{Name: "server_requests"}
-	metricCrosstalkRefusals := emf.MetricDefinition{Name: "crosstalk_refusals"}
-
 	namespace := e.options.Namespace
 
 	group := stats.Group
@@ -221,13 +230,6 @@ func (e *Exporter) exportGroupType(prev, curr groupcache_exporter.CacheTypeStats
 	cacheType string) {
 
 	dimensions["type"] = cacheType
-
-	metricCacheItems := emf.MetricDefinition{Name: "cache_items"}
-	metricCacheBytes := emf.MetricDefinition{Name: "cache_bytes"}
-	metricCacheGets := emf.MetricDefinition{Name: "cache_gets"}
-	metricCacheHits := emf.MetricDefinition{Name: "cache_hits"}
-	metricCacheEvictions := emf.MetricDefinition{Name: "cache_evictions"}
-	metricCacheEvictionsNonExpired := emf.MetricDefinition{Name: "cache_evictions_nonexpired"}
 
 	//
 	// cloudwatch metrics are deltas
