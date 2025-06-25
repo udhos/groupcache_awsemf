@@ -10,7 +10,7 @@ require (
 	github.com/modernprogram/groupcache/v2 v2.7.7
 	github.com/udhos/aws-emf v0.0.5
 	github.com/udhos/cloudwatchlog v0.0.3
-	github.com/udhos/groupcache_exporter v1.3.3
+	github.com/udhos/groupcache_exporter v1.3.4
 )
 
 require (
