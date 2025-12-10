@@ -1,8 +1,8 @@
 module github.com/udhos/groupcache_awsemf
 
-go 1.24.11
+go 1.24.11 // minimum
 
-toolchain go1.25.5
+toolchain go1.25.5 // preferred
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.0
@@ -10,9 +10,9 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8
 	github.com/mailgun/groupcache/v2 v2.6.0
 	github.com/modernprogram/groupcache/v2 v2.7.11
-	github.com/udhos/aws-emf v1.0.0
-	github.com/udhos/cloudwatchlog v1.0.0
-	github.com/udhos/groupcache_exporter v1.3.6
+	github.com/udhos/aws-emf v1.0.1
+	github.com/udhos/cloudwatchlog v1.0.1
+	github.com/udhos/groupcache_exporter v1.3.7
 )
 
 require (
